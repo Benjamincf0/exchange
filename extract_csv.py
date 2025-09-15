@@ -20,15 +20,21 @@ def scrape_course(course_code):
         page.locator("span:has(label:has-text('Include Expired Decisions')) input[type=checkbox]").click()
         page.click("button:has-text('Search')")
 
-        time.sleep(2)
-
         # Wait until results table body is loaded
         page.wait_for_selector("div.search-result-grid table[id*='cave'] tr.z-row")
+        prev_count = -1
+        while True:
+            rows = page.query_selector_all("div.search-result-grid div.search-result-grid-body table tbody.z-rows tr.z-row")
+            curr_count = len(rows)
 
-        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            if curr_count == prev_count:  # no new rows after scrolling
+                break
+
+            prev_count = curr_count
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")  # scroll to bottom
+            page.wait_for_load_state("networkidle")
 
         # --- Get rows ---
-        rows = page.query_selector_all("div.search-result-grid div.search-result-grid-body table tbody.z-rows tr.z-row")
         data = []
         for row in rows:
             cols = [c.inner_text().strip() for c in row.query_selector_all("td span.z-label")]
@@ -49,8 +55,8 @@ def scrape_course(course_code):
         browser.close()
         return data
 
-# courses = ["FACC300", "ECSE321", "COMP302", "ECSE324", "ECSE427", "ECSE428", "COMP360", "ECSE326"] # No ECSE316
-courses = ['FACC300']
+courses = ["FACC300", "ECSE321", "COMP302", "ECSE324", "ECSE427", "ECSE428", "COMP360", "ECSE326"] # No ECSE316
+# courses = ['FACC300']
 all_data = []
 
 for c in courses:
