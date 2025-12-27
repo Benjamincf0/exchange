@@ -21,7 +21,14 @@ def scrape_course(course_code):
         page.click("button:has-text('Search')")
 
         # Wait until results table body is loaded
-        page.wait_for_selector("div.search-result-grid table[id*='cave'] tr.z-row")
+        try:
+            page.wait_for_selector("div.search-result-grid table[id*='cave'] tr.z-row", timeout=5000)
+
+        except Exception:
+            print(f"No results for course {course_code}")
+            browser.close()
+            return []
+
         prev_count = -1
         while True:
             rows = page.query_selector_all("div.search-result-grid div.search-result-grid-body table tbody.z-rows tr.z-row")
@@ -55,8 +62,8 @@ def scrape_course(course_code):
         browser.close()
         return data
 
-courses = ["FACC300", "ECSE321", "COMP302", "ECSE324", "ECSE427", "ECSE428", "COMP360", "ECSE326"] # No ECSE316
-# courses = ['FACC300']
+courses = ["COMP302", "COMP360"]
+
 all_data = []
 
 for c in courses:
@@ -67,4 +74,4 @@ headers = ['McGill Course', 'McGill Title', 'External Course', 'External Title',
 
 df = pd.DataFrame(all_data, columns=headers)
 print(df.head())
-df.to_csv("equivalencies2.csv", index=False)
+df.to_csv("CORE_equivalencies.csv", index=False)
