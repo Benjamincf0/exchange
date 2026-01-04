@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright
 import pandas as pd
 import time
+from tqdm import tqdm
 
 # pd.set_option('display.max_rows', None)
 # pd.set_option('display.max_columns', None)
@@ -9,7 +10,7 @@ def scrape_course(course_code):
     url = "https://nimbus-ssl.mcgill.ca/exsa/search/searchEquivalency"
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(url)
 
@@ -22,7 +23,7 @@ def scrape_course(course_code):
 
         # Wait until results table body is loaded
         try:
-            page.wait_for_selector("div.search-result-grid table[id*='cave'] tr.z-row", timeout=5000)
+            page.wait_for_selector("div.search-result-grid table[id*='cave'] tr.z-row", timeout=2500)
 
         except Exception:
             print(f"No results for course {course_code}")
@@ -62,16 +63,90 @@ def scrape_course(course_code):
         browser.close()
         return data
 
-courses = ["COMP302", "COMP360"]
+def extract(courses, category):
+    all_data = []
+    for c in tqdm(courses):
+        rows = scrape_course(c)
+        all_data.extend(rows)
 
-all_data = []
+    headers = ['McGill Course', 'McGill Title', 'External Course', 'External Title', 'External Institution', 'Country', 'Status', 'Message']
 
-for c in courses:
-    rows = scrape_course(c)
-    all_data.extend(rows)
+    df = pd.DataFrame(all_data, columns=headers)
+    print(df.head())
+    df.to_csv(f"{category}_equivalencies.csv", index=False)
 
-headers = ['McGill Course', 'McGill Title', 'External Course', 'External Title', 'External Institution', 'Country', 'Status', 'Message']
+course_lists = {
+    "MINOR": [
+        "MATH242",
+        "MATH223",
+        "MATH247",
+        "MATH243",
+        "MATH264",
+        "MATH316",
+        "MATH319",
+        "MATH326",
+        "MATH378",
+        "MATH417",
+        "MATH427",
+        "MATH447",
+        "MATH463",
+        "MATH475",
+        "MATH478",
+        "MATH563",
+    ],
+    "TCA": [
+        "ECSE325",
+        "ECSE415",
+        "ECSE416",
+        "ECSE422",
+        "ECSE439",
+        "ECSE444",
+        "ECSE544",
+    ],
+    "TCB": [
+        "COMP307",
+        "COMP330",
+        "COMP350",
+        "COMP370",
+        "COMP417",
+        "COMP424",
+        "COMP445",
+        "COMP520",
+        "COMP521",
+        "COMP525",
+        "COMP529",
+        "COMP533",
+        "COMP547",
+        "COMP549",
+        "COMP550",
+        "COMP551",
+        "COMP559",
+        "COMP562",
+        "COMP579",
+        "ECSE343",
+        "ECSE421",
+        "ECSE424",
+        "ECSE425",
+        "ECSE437",
+        "ECSE446",
+        "ECSE507",
+        "ECSE509",
+        "ECSE525",
+        "ECSE526",
+        "ECSE532",
+        "ECSE551",
+        "ECSE552",
+        "ECSE554",
+        "ECSE556",
+        "ECSE557",
+        "ECSE561",
+        "MATH247"
+    ],
+    "CORE": ["COMP302", "COMP360", "ECSE427", "ECSE428", "ECSE429", "ECSE421", "ECSE420"],
+    "IMPACT": ["ANTH212", "ARCH515", "BTEC502", "COMS200", "COMS411", "ECON225", "ECON347", "ENVR201", "GEOG203", "GEOG205", "GEOG302", "INSY331", "INSY334", "INSY455", "LLCU212", "MGCR331", "MGPO440", "MGPO460", "MGPO485", "PHIL343", "SEAD500", "SEAD530", "SOCI235", "SOCI312", "SOCI325"]
+}
 
-df = pd.DataFrame(all_data, columns=headers)
-print(df.head())
-df.to_csv("CORE_equivalencies.csv", index=False)
+for category, courses in course_lists.items():
+    print(f"Extracting {category} courses...")
+    extract(courses, category)
+    print(f"Done extracting {category}\n\n\n")
